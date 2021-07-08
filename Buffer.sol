@@ -65,9 +65,7 @@ contract Buffer is Context, IBuffer {
                     block.timestamp
                 );
 
-                uint256 balance1 = HYPER_DEFI.balanceOf(address(this));
-                
-                HYPER_DEFI.transfer(BLACK_HOLE, balance1 - balance0);
+                HYPER_DEFI.transfer(BLACK_HOLE, HYPER_DEFI.balanceOf(address(this)) - balance0);
             }
         }
     }
