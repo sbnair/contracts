@@ -21,7 +21,7 @@ contract HyperDeFi is DeFiToken {
             uint256 usernames,
 
             uint256[10] memory supplies,
-            address[10] memory accounts
+            address[11] memory accounts
         )
     {
         tokenName     = _name;
@@ -37,10 +37,11 @@ contract HyperDeFi is DeFiToken {
         usernames = _totalUsername;
 
         // supplies
-        supplies[0] = _gate + _totalSupply; // cap
-        supplies[1] = _gate;                // gate
-        supplies[2] = _totalSupply;         // totalSupply
-        supplies[3] = _totalTax;            // totalTax
+        supplies[0] = TOTAL_SUPPLY_CAP;                // cap
+        supplies[1] = TOTAL_SUPPLY_CAP - _totalSupply; // gate
+
+        supplies[2] = _totalSupply;               // totalSupply
+        supplies[3] = _totalTax;                  // totalTax
         supplies[4] = balanceOf(PANCAKE_PAIR);    // liquidity
         supplies[5] = balanceOf(address(BUFFER)); // buffer
         supplies[6] = balanceOf(TAX);             // tax
@@ -49,16 +50,17 @@ contract HyperDeFi is DeFiToken {
         supplies[9] = balanceOf(BLACK_HOLE);      // dead
 
         // accounts
-        accounts[0] = address(PANCAKE); // pancake
-        accounts[1] = PANCAKE_PAIR;     // pair
-        accounts[2] = address(BUSD);    // BUSD
-        accounts[3] = TAX;              // tax
-        accounts[4] = address(BUFFER);  // buffer
-        accounts[5] = AIRDROP;          // airdrop
-        accounts[6] = FOMO;             // fomo
-        accounts[7] = owner();          // fund
-        accounts[8] = address(0);       // zero
-        accounts[9] = BLACK_HOLE;       // burn
+        accounts[0] = address(PANCAKE);  // pancake
+        accounts[1] = PANCAKE_PAIR;      // pair
+        accounts[2] = address(BUSD);     // BUSD
+        accounts[3] = TAX;               // tax
+        accounts[4] = address(BUFFER);   // buffer
+        accounts[5] = AIRDROP;           // airdrop
+        accounts[6] = FOMO;              // fomo
+        accounts[7] = owner();           // fund
+        accounts[8] = address(0);        // zero
+        accounts[9] = BLACK_HOLE;        // burn
+        accounts[10] = address(PRESALE); // presale
     }
 
     function getGlobal() public view
@@ -67,7 +69,7 @@ contract HyperDeFi is DeFiToken {
             address fomoNext,
 
             uint16[7]   memory i16,
-            uint256[11] memory i256,
+            uint256[15] memory i256,
 
             uint8[8] memory takerFees,
             uint8[8] memory makerFees,
@@ -87,11 +89,11 @@ contract HyperDeFi is DeFiToken {
         i16[3] = AUTO_SWAP_NUMERATOR_MIN; // autoSwapNumeratorMin
         i16[4] = AUTO_SWAP_NUMERATOR_MAX; // autoSwapNumeratorMax
         i16[5] = AUTO_SWAP_DENOMINATOR;   // autoSwapDenominator
-        i16[6] = FOMO_PERCENTAGE;          // fomoPercentage
+        i16[6] = FOMO_PERCENTAGE;         // fomoPercentage
 
         i256[0] = LAUNCH_TIMESTAMP;      // launch timestamp
         i256[1] = AIRDROP_MAX;           // airdrop max
-        i256[2] = LIQUIDITY_AMOUNT;      // liquidity amount (min)
+        i256[2] = INIT_LIQUIDITY;        // init liquidity
         i256[3] = LOTTO_THRESHOLD;       // lotto  threshold
         i256[4] = _getWhaleThreshold();  // whale  threshold
         i256[5] = _getRobberThreshold(); // robber threshold
@@ -142,6 +144,22 @@ contract HyperDeFi is DeFiToken {
 
         flats = _flats;
         slots = _slots;
+
+
+        // presale
+        (
+            ,         // bool depositAllowed,
+            i256[11], // uint256 endTimestamp,
+            i256[12], // uint256 liquidityCreatedTimestamp,
+            i256[13], // uint256 presaleAmount,
+            i256[14], // uint256 balance,
+            i256[15], // uint256 fund,
+            ,         // uint256 portion,
+            ,         // bool redeemed,
+            ,         // uint256 busdBalance,
+                      // uint256 busdAllowance
+        )
+        = PRESALE.getStatus(address(0));
     }
 
     function getAccount(address account) public view
