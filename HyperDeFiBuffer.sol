@@ -5,12 +5,12 @@ pragma solidity =0.8.6;
 import "./Context.sol";
 import "./IERC20.sol";
 import "./IUniswapV2Router02.sol";
-import "./IBuffer.sol";
+import "./IHyperDeFiBuffer.sol";
 
 
-contract Buffer is Context, IBuffer {
+contract HyperDeFiBuffer is Context, IBuffer {
+    IERC20             private constant HYPER_DEFI = IERC20(0xA176e5dF74638af78072d7e0A7C5b7DcB5576c87);
     IERC20             private constant BUSD       = IERC20(0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7);
-    IERC20             private constant HYPER_DEFI = IERC20(0xF774D805C6AbCE3FDBf040AE3eDc2200e09942cc);
     IUniswapV2Router02 private constant PANCAKE    = IUniswapV2Router02(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3);
     address            private constant BLACK_HOLE = address(0xdead);
     
@@ -55,17 +55,13 @@ contract Buffer is Context, IBuffer {
             
             uint256 amountSwap = PANCAKE.getAmountsOut(busd0, path)[1];
             if (0 < amountSwap) {
-                uint256 balance0 = HYPER_DEFI.balanceOf(address(this));
-
                 PANCAKE.swapExactTokensForTokensSupportingFeeOnTransferTokens(
                     busd0,
                     0,
                     path,
-                    address(this),
+                    BLACK_HOLE,
                     block.timestamp
                 );
-
-                HYPER_DEFI.transfer(BLACK_HOLE, HYPER_DEFI.balanceOf(address(this)) - balance0);
             }
         }
     }
