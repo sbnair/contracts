@@ -8,7 +8,7 @@ import "./IUniswapV2Router02.sol";
 import "./IHyperDeFiBuffer.sol";
 
 
-contract HyperDeFiBuffer is Context, IBuffer {
+contract HyperDeFiBuffer is Context, IHyperDeFiBuffer {
     IERC20             private constant HYPER_DEFI = IERC20(0xA176e5dF74638af78072d7e0A7C5b7DcB5576c87);
     IERC20             private constant BUSD       = IERC20(0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7);
     IUniswapV2Router02 private constant PANCAKE    = IUniswapV2Router02(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3);
