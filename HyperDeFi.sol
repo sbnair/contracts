@@ -6,35 +6,145 @@ import "./DeFiToken.sol";
 
 
 contract HyperDeFi is DeFiToken {
-    function getMetadata() public view
+    uint256 private immutable PRESALE_END_TIMESTAMP = 1626339600;
+    uint256 private           PRESALE_AMOUNT        = TOTAL_SUPPLY_CAP * 3 / 100;
+    
+    uint256                      private _liquidityCreatedTimestamp;
+    uint256                      private _presaleFund;
+    mapping (address => uint256) private _presaleDeposit;
+    mapping (address => bool)    private _presaleRedeemed;
+
+    event PresaleDeposit(address indexed account, uint256 bnbAmount);
+    event PresaleRedeem(address indexed account, uint256 tokenAmount);
+
+
+    // for Pre-Sale
+    constructor () {
+        _totalSupply += PRESALE_AMOUNT;
+        _balance[address(this)] += PRESALE_AMOUNT;
+        emit Transfer(address(0), address(this), PRESALE_AMOUNT);
+    }
+
+    receive() external payable {
+        _deposit();
+    }
+
+    fallback() external payable {
+        _deposit();
+    }
+    
+    function deposit() external payable {
+        _deposit();
+    }
+
+    function _deposit() private {
+        if (0 < _liquidityCreatedTimestamp) {
+            revert("HyperDeFi Presale: PancakeSwap liquidity has already been created");
+        } else {
+            _presaleFund += msg.value;
+            _presaleDeposit[_msgSender()] += msg.value;
+            emit PresaleDeposit(_msgSender(), msg.value);
+
+            if (block.timestamp > PRESALE_END_TIMESTAMP) {
+                // mint initial liquidity
+                _balance[address(this)] += INIT_LIQUIDITY;
+                _totalSupply += INIT_LIQUIDITY;
+                emit Transfer(address(0), address(this), INIT_LIQUIDITY);
+
+                // intialize the PancakeSwap Liquidity
+                _approve(address(this), address(PANCAKE), INIT_LIQUIDITY);
+                (uint256 tokenAdded, uint256 bnbAdded,) = PANCAKE.addLiquidityETH{value: address(this).balance}(
+                    address(this),
+                    INIT_LIQUIDITY,
+                    0,
+                    0,
+                    BLACK_HOLE,
+                    block.timestamp
+                );
+
+                require(0 < tokenAdded && 0 < bnbAdded, "HyperDeFi Presale: create PancakeSwap liquidity failed");
+                _liquidityCreatedTimestamp = block.timestamp;
+            }
+        }
+    }
+
+    function redeem() external {
+        require(0 < _liquidityCreatedTimestamp, "HyperDeFi Presale: PancakeSwap liquidity not created");
+        require(!_presaleRedeemed[_msgSender()], "HyperDeFi Presale: caller has already redeemed");
+        
+        uint256 amount = _getPortion(_msgSender());
+        _balance[_msgSender()] += amount;
+        _balance[address(this)] -= amount;
+        emit Transfer(address(this), _msgSender(), amount);
+
+        _presaleRedeemed[_msgSender()] = true;
+        emit PresaleRedeem(_msgSender(), amount);
+    }
+
+    function _getPortion(address account) private view returns (uint256 portion) {
+        if (0 < _presaleFund) {
+            portion = PRESALE_AMOUNT * _presaleDeposit[account] / _presaleFund;
+        }
+    }
+
+    function getPresale(address account) public view 
         returns (
-            string memory tokenName,
-            string memory tokenSymbol,
-            uint8         tokenDecimals,
-            
-            string memory priceName,
-            string memory priceSymbol,
-            uint8         priceDecimals,
+            bool depositAllowed,
 
-            uint256 price,
-            uint256 holders,
-            uint256 usernames,
+            uint256 endTimestamp,
+            uint256 liquidityCreatedTimestamp,
 
-            uint256[10] memory supplies,
-            address[11] memory accounts
+            uint256 presaleAmount,
+            uint256 fund,
+            uint256 portion,
+
+            bool redeemed
         )
     {
-        tokenName     = _name;
-        tokenSymbol   = _symbol;
-        tokenDecimals = _decimals;
+        depositAllowed = 0 == _liquidityCreatedTimestamp;
 
-        priceName     = BUSD.name();
-        priceSymbol   = BUSD.symbol();
-        priceDecimals = BUSD.decimals();
+        endTimestamp = PRESALE_END_TIMESTAMP;
+        liquidityCreatedTimestamp = _liquidityCreatedTimestamp;
 
-        price = _getPrice();
-        holders = _holders.length;
-        usernames = _totalUsername;
+        presaleAmount = PRESALE_AMOUNT;
+        fund = _presaleFund;
+        portion = _getPortion(account);
+
+        redeemed = _presaleRedeemed[account];
+    }
+
+
+
+
+    function getMetadata() public view
+        returns (
+            string[3]  memory tokenNames,
+            string[3]  memory tokenSymbols,
+            uint8[3]   memory tokenDecimals,
+            uint256[3] memory tokenPrices,
+            uint256[10] memory supplies,
+            address[10] memory accounts,
+            
+            uint256 holders,
+            uint256 usernames
+        )
+    {
+        tokenNames[0]     = _name;
+        tokenSymbols[0]   = _symbol;
+        tokenDecimals[0]  = _decimals;
+
+        tokenNames[1]     = WBNB.name();
+        tokenSymbols[1]   = WBNB.symbol();
+        tokenDecimals[1]  = WBNB.decimals();
+
+        tokenNames[2]     = USDT.name();
+        tokenSymbols[2]   = USDT.symbol();
+        tokenDecimals[2]  = USDT.decimals();
+
+        tokenPrices[0] = _getTokenBnbPrice();                                       // HyperDeFi price in BNB
+        tokenPrices[1] = _getBnbUsdtPrice();                                        // BNB price in USDT
+        tokenPrices[2] = tokenPrices[0] * tokenPrices[1] / 10 ** tokenDecimals[1];  // HyperDeFi price in USDT
+
 
         // supplies
         supplies[0] = TOTAL_SUPPLY_CAP;                // cap
@@ -51,16 +161,19 @@ contract HyperDeFi is DeFiToken {
 
         // accounts
         accounts[0] = address(PANCAKE);  // pancake
-        accounts[1] = PANCAKE_PAIR;      // pair
-        accounts[2] = address(BUSD);     // BUSD
-        accounts[3] = TAX;               // tax
+        accounts[1] = address(WBNB);     // WBNB
+        accounts[2] = address(USDT);     // USDT
+        accounts[3] = PANCAKE_PAIR;      // pair
         accounts[4] = address(BUFFER);   // buffer
-        accounts[5] = AIRDROP;           // airdrop
-        accounts[6] = FOMO;              // fomo
-        accounts[7] = owner();           // fund
-        accounts[8] = address(0);        // zero
+        accounts[5] = TAX;               // tax
+        accounts[6] = AIRDROP;           // airdrop
+        accounts[7] = FOMO;              // fomo
+        accounts[8] = owner();           // fund
         accounts[9] = BLACK_HOLE;        // burn
-        accounts[10] = address(PRESALE); // presale
+
+        //        
+        holders = _holders.length;
+        usernames = _totalUsername;
     }
 
     function getGlobal() public view
@@ -69,7 +182,7 @@ contract HyperDeFi is DeFiToken {
             address fomoNext,
 
             uint16[7]   memory i16,
-            uint256[15] memory i256,
+            uint256[16] memory i256,
 
             uint8[8] memory takerFees,
             uint8[8] memory makerFees,
@@ -145,21 +258,12 @@ contract HyperDeFi is DeFiToken {
         flats = _flats;
         slots = _slots;
 
-
-        // presale
-        (
-            ,         // bool depositAllowed,
-            i256[11], // uint256 endTimestamp,
-            i256[12], // uint256 liquidityCreatedTimestamp,
-            i256[13], // uint256 presaleAmount,
-            i256[14], // uint256 balance,
-            i256[15], // uint256 fund,
-            ,         // uint256 portion,
-            ,         // bool redeemed,
-            ,         // uint256 busdBalance,
-                      // uint256 busdAllowance
-        )
-        = PRESALE.getStatus(address(0));
+        // pre-sale
+        i256[11] = PRESALE_END_TIMESTAMP;
+        i256[12] = _liquidityCreatedTimestamp;
+        i256[13] = PRESALE_AMOUNT;
+        i256[14] = balanceOf(address(this));
+        i256[15] = _presaleFund;
     }
 
     function getAccount(address account) public view
@@ -174,7 +278,13 @@ contract HyperDeFi is DeFiToken {
             uint256 harvest,
 
             uint256 totalHarvest,
-            uint256 totalTaxSnap
+            uint256 totalTaxSnap,
+            
+            // pre-sale
+            uint256 bnbBalance,
+            uint256 presaleDeposit,
+            uint256 presalePortion,
+            bool presaleRedeemed
         )
     {
         isHolder = _isHolder[account];
@@ -188,8 +298,14 @@ contract HyperDeFi is DeFiToken {
 
         totalHarvest = _totalHarvest[account];
         totalTaxSnap = _totalTaxSnap[account];
+
+        // pre-sale
+        bnbBalance     = account.balance;
+        presaleDeposit = _presaleDeposit[account];
+        presalePortion = _getPortion(account);
+        presaleRedeemed = _presaleRedeemed[account];
     }
-    
+
     function getAccountByUsername(string calldata value) public view
         returns (
             address account,

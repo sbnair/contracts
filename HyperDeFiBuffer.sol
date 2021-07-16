@@ -9,8 +9,8 @@ import "./IHyperDeFiBuffer.sol";
 
 
 contract HyperDeFiBuffer is Context, IHyperDeFiBuffer {
-    IERC20             private constant HYPER_DEFI = IERC20(0xA176e5dF74638af78072d7e0A7C5b7DcB5576c87);
-    IERC20             private constant BUSD       = IERC20(0x78867BbEeF44f2326bF8DDd1941a4439382EF2A7);
+    IERC20             private constant HYPER_DEFI = IERC20(0x0F6F376F562F625BBe8b64B52208Eb82aD310c49);
+    IERC20             private constant WBNB       = IERC20(0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd);
     IUniswapV2Router02 private constant PANCAKE    = IUniswapV2Router02(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3);
     address            private constant BLACK_HOLE = address(0xdead);
     
@@ -20,7 +20,7 @@ contract HyperDeFiBuffer is Context, IHyperDeFiBuffer {
         // path
         address[] memory path = new address[](2);
         path[0] = address(HYPER_DEFI);
-        path[1] = address(BUSD);
+        path[1] = address(WBNB);
 
         // swap half amount to BUSD
         uint256 half = amount / 2;
@@ -33,13 +33,13 @@ contract HyperDeFiBuffer is Context, IHyperDeFiBuffer {
         );
 
         // add liquidity
-        uint256 busdBalance = BUSD.balanceOf(address(this));
-        BUSD.approve(address(PANCAKE), busdBalance);
+        uint256 wbnbBalance = WBNB.balanceOf(address(this));
+        WBNB.approve(address(PANCAKE), wbnbBalance);
         (tokenAdded, busdAdded,) = PANCAKE.addLiquidity(
             address(HYPER_DEFI),
-            address(BUSD),
+            address(WBNB),
             HYPER_DEFI.balanceOf(address(this)),
-            busdBalance,
+            wbnbBalance,
             0,
             0,
             BLACK_HOLE,
@@ -48,15 +48,15 @@ contract HyperDeFiBuffer is Context, IHyperDeFiBuffer {
         tokenAdded += half;
         
         // swap remaining BUSD to HyperDeFi, then send to black-hole
-        uint256 busd0 = BUSD.balanceOf(address(this));
-        if (0 < busd0) {
-            path[0] = address(BUSD);
+        uint256 wbnb0 = WBNB.balanceOf(address(this));
+        if (0 < wbnb0) {
+            path[0] = address(WBNB);
             path[1] = address(HYPER_DEFI);
             
-            uint256 amountSwap = PANCAKE.getAmountsOut(busd0, path)[1];
+            uint256 amountSwap = PANCAKE.getAmountsOut(wbnb0, path)[1];
             if (0 < amountSwap) {
                 PANCAKE.swapExactTokensForTokensSupportingFeeOnTransferTokens(
-                    busd0,
+                    wbnb0,
                     0,
                     path,
                     BLACK_HOLE,
