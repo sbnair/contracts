@@ -1,6 +1,6 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity =0.8.6;
+pragma solidity =0.8.7;
 
 import "./Context.sol";
 import "./IERC20.sol";
@@ -9,12 +9,12 @@ import "./IHyperDeFiBuffer.sol";
 
 
 contract HyperDeFiBuffer is Context, IHyperDeFiBuffer {
-    IERC20             private constant HYPER_DEFI = IERC20(0x0F6F376F562F625BBe8b64B52208Eb82aD310c49);
+    IERC20             private constant HYPER_DEFI = IERC20(0xC0Ee7Bad4ef6440E24b3cc99aa43d6682a760A89);
     IERC20             private constant WBNB       = IERC20(0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd);
     IUniswapV2Router02 private constant PANCAKE    = IUniswapV2Router02(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3);
     address            private constant BLACK_HOLE = address(0xdead);
-    
-    function swapIntoLiquidity(uint256 amount) external override returns (uint256 tokenAdded, uint256 busdAdded) {
+
+    function swapIntoLiquidity(uint256 amount) external override returns (uint256 tokenAdded, uint256 wbnbAdded) {
         require(_msgSender() == address(HYPER_DEFI), "Buffer: caller is not `HyperDeFi` contract");
 
         // path
@@ -22,7 +22,7 @@ contract HyperDeFiBuffer is Context, IHyperDeFiBuffer {
         path[0] = address(HYPER_DEFI);
         path[1] = address(WBNB);
 
-        // swap half amount to BUSD
+        // swap half amount to WBNB
         uint256 half = amount / 2;
         PANCAKE.swapExactTokensForTokensSupportingFeeOnTransferTokens(
             half,
@@ -35,7 +35,7 @@ contract HyperDeFiBuffer is Context, IHyperDeFiBuffer {
         // add liquidity
         uint256 wbnbBalance = WBNB.balanceOf(address(this));
         WBNB.approve(address(PANCAKE), wbnbBalance);
-        (tokenAdded, busdAdded,) = PANCAKE.addLiquidity(
+        (tokenAdded, wbnbAdded,) = PANCAKE.addLiquidity(
             address(HYPER_DEFI),
             address(WBNB),
             HYPER_DEFI.balanceOf(address(this)),
@@ -46,8 +46,8 @@ contract HyperDeFiBuffer is Context, IHyperDeFiBuffer {
             block.timestamp
         );
         tokenAdded += half;
-        
-        // swap remaining BUSD to HyperDeFi, then send to black-hole
+
+        // swap remaining WBNB to HyperDeFi, then send to black-hole
         uint256 wbnb0 = WBNB.balanceOf(address(this));
         if (0 < wbnb0) {
             path[0] = address(WBNB);

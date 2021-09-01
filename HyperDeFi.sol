@@ -1,12 +1,12 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity =0.8.6;
+pragma solidity =0.8.7;
 
-import "./DeFiToken.sol";
+import "./HyperDeFiToken.sol";
 
 
-contract HyperDeFi is DeFiToken {
-    uint256 private immutable PRESALE_END_TIMESTAMP = 1626339600;
+contract HyperDeFi is HyperDeFiToken {
+    uint256 private immutable PRESALE_END_TIMESTAMP = 1630476000;
     uint256 private           PRESALE_AMOUNT        = TOTAL_SUPPLY_CAP * 3 / 100;
     
     uint256                      private _liquidityCreatedTimestamp;
@@ -32,7 +32,7 @@ contract HyperDeFi is DeFiToken {
     fallback() external payable {
         _deposit();
     }
-    
+
     function deposit() external payable {
         _deposit();
     }
@@ -50,6 +50,7 @@ contract HyperDeFi is DeFiToken {
                 _balance[address(this)] += INIT_LIQUIDITY;
                 _totalSupply += INIT_LIQUIDITY;
                 emit Transfer(address(0), address(this), INIT_LIQUIDITY);
+                emit Tx(uint8(TxTypes.FLAT), address(0), address(this), INIT_LIQUIDITY, INIT_LIQUIDITY);
 
                 // intialize the PancakeSwap Liquidity
                 _approve(address(this), address(PANCAKE), INIT_LIQUIDITY);
@@ -72,6 +73,8 @@ contract HyperDeFi is DeFiToken {
         require(0 < _liquidityCreatedTimestamp, "HyperDeFi Presale: PancakeSwap liquidity not created");
         require(!_presaleRedeemed[_msgSender()], "HyperDeFi Presale: caller has already redeemed");
         
+        _addHolder(_msgSender());
+
         uint256 amount = _getPortion(_msgSender());
         _balance[_msgSender()] += amount;
         _balance[address(this)] -= amount;
@@ -112,8 +115,6 @@ contract HyperDeFi is DeFiToken {
 
         redeemed = _presaleRedeemed[account];
     }
-
-
 
 
     function getMetadata() public view
@@ -337,7 +338,7 @@ contract HyperDeFi is DeFiToken {
         totalHarvest = _totalHarvest[account];
         totalTaxSnap = _totalTaxSnap[account];
     }
-    
+
     function getHolders(uint256 offset) public view
         returns (
             uint256[100] memory ids,

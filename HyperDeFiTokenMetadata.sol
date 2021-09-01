@@ -4,9 +4,9 @@ pragma solidity ^0.8.0;
 
 import "./IERC20Metadata.sol";
 
-contract ERC20Metadata is IERC20Metadata {
-    string internal constant _name   = "v474";
-    string internal constant _symbol = "v474";
+contract HyperDeFiTokenMetadata is IERC20Metadata {
+    string internal constant _name   = "v476";
+    string internal constant _symbol = "v476";
     uint8  internal constant _decimals = 2;
 
     /**

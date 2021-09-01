@@ -1,26 +1,43 @@
-// SPDX-License-Identifier: MIT
-// https://github.com/OpenZeppelin/openzeppelin-contracts/blob/master/contracts/token/ERC20/extensions/IERC20Metadata.sol (removed: IERC20)
+// SPDX-License-Identifier: GPL-3.0
 
 pragma solidity ^0.8.0;
 
-/**
- * @dev Interface for the optional metadata functions from the ERC20 standard.
- *
- * _Available since v4.1._
- */
-interface IERC20Metadata {
+import "./IERC20Metadata.sol";
+
+contract HyperDeFiTokenMetadata is IERC20Metadata {
+    string internal constant _name   = "v474";
+    string internal constant _symbol = "v474";
+    uint8  internal constant _decimals = 2;
+
     /**
      * @dev Returns the name of the token.
      */
-    function name() external view returns (string memory);
+    function name() public pure override returns (string memory) {
+        return _name;
+    }
 
     /**
-     * @dev Returns the symbol of the token.
+     * @dev Returns the symbol of the token, usually a shorter version of the
+     * name.
      */
-    function symbol() external view returns (string memory);
+    function symbol() public pure override returns (string memory) {
+        return _symbol;
+    }
 
     /**
-     * @dev Returns the decimals places of the token.
+     * @dev Returns the number of decimals used to get its user representation.
+     * For example, if `decimals` equals `2`, a balance of `505` tokens should
+     * be displayed to a user as `5,05` (`505 / 10 ** 2`).
+     *
+     * Tokens usually opt for a value of 18, imitating the relationship between
+     * Ether and Wei. This is the value {ERC20} uses, unless this function is
+     * overridden;
+     *
+     * NOTE: This information is only used for _display_ purposes: it in
+     * no way affects any of the arithmetic of the contract, including
+     * {IERC20-balanceOf} and {IERC20-transfer}.
      */
-    function decimals() external view returns (uint8);
+    function decimals() public pure override returns (uint8) {
+        return _decimals;
+    }
 }
