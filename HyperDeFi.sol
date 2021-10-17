@@ -1,28 +1,56 @@
 // SPDX-License-Identifier: GPL-3.0
 
-pragma solidity =0.8.7;
+pragma solidity =0.8.9;
 
 import "./HyperDeFiToken.sol";
 
 
 contract HyperDeFi is HyperDeFiToken {
-    uint256 private immutable PRESALE_END_TIMESTAMP = 1630476000;
-    uint256 private           PRESALE_AMOUNT        = TOTAL_SUPPLY_CAP * 3 / 100;
-    
     uint256                      private _liquidityCreatedTimestamp;
-    uint256                      private _presaleFund;
-    mapping (address => uint256) private _presaleDeposit;
-    mapping (address => bool)    private _presaleRedeemed;
+    uint256                      private _genesisFund;
+    mapping (address => uint256) private _genesisDeposit;
+    mapping (address => bool)    private _genesisRedeemed;
 
-    event PresaleDeposit(address indexed account, uint256 bnbAmount);
-    event PresaleRedeem(address indexed account, uint256 tokenAmount);
+    event GenesisDeposit(address indexed account, uint256 bnbAmount);
 
+
+    modifier inGenesis {
+        require(block.timestamp > GENESIS_START_TIMESTAMP, "HyperDeFi Genesis: not started");
+        require(0 == _liquidityCreatedTimestamp, "HyperDeFi Genesis: PancakeSwap liquidity has already been created");
+        require(GENESIS_DEPOSIT_MAX > _genesisDeposit[_msgSender()], "HyperDeFi Genesis: deposit max reached for the sender");
+
+        _;
+        
+        if (GENESIS_DEPOSIT_CAP <= address(this).balance || GENESIS_END_TIMESTAMP < block.timestamp) {
+
+            // mint initial liquidity
+            _balance[address(this)] += INIT_LIQUIDITY;
+            _totalSupply += INIT_LIQUIDITY;
+            emit Transfer(address(0), address(this), INIT_LIQUIDITY);
+            emit Tx(uint8(TX_TYPE.FLAT), address(0), address(this), INIT_LIQUIDITY, INIT_LIQUIDITY);
+    
+            // intialize the PancakeSwap Liquidity
+            _approve(address(this), address(PANCAKE), INIT_LIQUIDITY);
+            (uint256 tokenAdded, uint256 bnbAdded,) = PANCAKE.addLiquidityETH{value: address(this).balance}(
+                address(this),
+                INIT_LIQUIDITY,
+                0,
+                0,
+                BLACK_HOLE,
+                block.timestamp
+            );
+    
+            require(0 < tokenAdded && 0 < bnbAdded, "HyperDeFi Genesis: create PancakeSwap liquidity failed");
+            _liquidityCreatedTimestamp = block.timestamp;
+        }
+    }
 
     // for Pre-Sale
     constructor () {
-        _totalSupply += PRESALE_AMOUNT;
-        _balance[address(this)] += PRESALE_AMOUNT;
-        emit Transfer(address(0), address(this), PRESALE_AMOUNT);
+        _totalSupply += GENESIS_AMOUNT;
+        _balance[address(this)] += GENESIS_AMOUNT;
+        emit Transfer(address(0), address(this), GENESIS_AMOUNT);
+        emit Tx(uint8(TX_TYPE.FLAT), address(0), address(this), GENESIS_AMOUNT, GENESIS_AMOUNT);
     }
 
     receive() external payable {
@@ -37,67 +65,81 @@ contract HyperDeFi is HyperDeFiToken {
         _deposit();
     }
 
-    function _deposit() private {
-        if (0 < _liquidityCreatedTimestamp) {
-            revert("HyperDeFi Presale: PancakeSwap liquidity has already been created");
-        } else {
-            _presaleFund += msg.value;
-            _presaleDeposit[_msgSender()] += msg.value;
-            emit PresaleDeposit(_msgSender(), msg.value);
+    function _deposit() private inGenesis {
+        uint256 amount = msg.value;
 
-            if (block.timestamp > PRESALE_END_TIMESTAMP) {
-                // mint initial liquidity
-                _balance[address(this)] += INIT_LIQUIDITY;
-                _totalSupply += INIT_LIQUIDITY;
-                emit Transfer(address(0), address(this), INIT_LIQUIDITY);
-                emit Tx(uint8(TxTypes.FLAT), address(0), address(this), INIT_LIQUIDITY, INIT_LIQUIDITY);
-
-                // intialize the PancakeSwap Liquidity
-                _approve(address(this), address(PANCAKE), INIT_LIQUIDITY);
-                (uint256 tokenAdded, uint256 bnbAdded,) = PANCAKE.addLiquidityETH{value: address(this).balance}(
-                    address(this),
-                    INIT_LIQUIDITY,
-                    0,
-                    0,
-                    BLACK_HOLE,
-                    block.timestamp
-                );
-
-                require(0 < tokenAdded && 0 < bnbAdded, "HyperDeFi Presale: create PancakeSwap liquidity failed");
-                _liquidityCreatedTimestamp = block.timestamp;
-            }
+        // GENESIS_DEPOSIT_MAX
+        if (GENESIS_DEPOSIT_MAX < amount + _genesisDeposit[_msgSender()]) {
+            amount = GENESIS_DEPOSIT_MAX -_genesisDeposit[_msgSender()];
+            payable(_msgSender()).transfer(msg.value - amount);
         }
+
+        // GENESIS_DEPOSIT_CAP
+        if (GENESIS_DEPOSIT_CAP < address(this).balance) {
+            amount = address(this).balance - GENESIS_DEPOSIT_CAP;
+            payable(_msgSender()).transfer(address(this).balance - GENESIS_DEPOSIT_CAP);
+        }
+
+        _genesisFund += amount;
+        _genesisDeposit[_msgSender()] += amount;
+        emit GenesisDeposit(_msgSender(), amount);
     }
 
-    function redeem() external {
-        require(0 < _liquidityCreatedTimestamp, "HyperDeFi Presale: PancakeSwap liquidity not created");
-        require(!_presaleRedeemed[_msgSender()], "HyperDeFi Presale: caller has already redeemed");
+    function _createLiquidity() private {
+        // mint initial liquidity
+        _balance[address(this)] += INIT_LIQUIDITY;
+        _totalSupply += INIT_LIQUIDITY;
+        emit Transfer(address(0), address(this), INIT_LIQUIDITY);
+        emit Tx(uint8(TX_TYPE.FLAT), address(0), address(this), INIT_LIQUIDITY, INIT_LIQUIDITY);
+
+        // intialize the PancakeSwap Liquidity
+        _approve(address(this), address(PANCAKE), INIT_LIQUIDITY);
+        (uint256 tokenAdded, uint256 bnbAdded,) = PANCAKE.addLiquidityETH{value: address(this).balance}(
+            address(this),
+            INIT_LIQUIDITY,
+            0,
+            0,
+            BLACK_HOLE,
+            block.timestamp
+        );
+
+        require(0 < tokenAdded && 0 < bnbAdded, "HyperDeFi Genesis: create PancakeSwap liquidity failed");
+        _liquidityCreatedTimestamp = block.timestamp;
+    }
+
+    function genesisRedeem() external {
+        require(0 < _liquidityCreatedTimestamp, "HyperDeFi Genesis: PancakeSwap liquidity not created");
+        require(!_genesisRedeemed[_msgSender()], "HyperDeFi Genesis: caller has already redeemed");
         
         _addHolder(_msgSender());
 
-        uint256 amount = _getPortion(_msgSender());
+        uint256 amount = _genesisPortion(_msgSender());
         _balance[_msgSender()] += amount;
         _balance[address(this)] -= amount;
         emit Transfer(address(this), _msgSender(), amount);
 
-        _presaleRedeemed[_msgSender()] = true;
-        emit PresaleRedeem(_msgSender(), amount);
+        _genesisRedeemed[_msgSender()] = true;
+        emit Tx(uint8(TX_TYPE.REDEEM), address(this), _msgSender(), amount, amount);
     }
 
-    function _getPortion(address account) private view returns (uint256 portion) {
-        if (0 < _presaleFund) {
-            portion = PRESALE_AMOUNT * _presaleDeposit[account] / _presaleFund;
+    function _genesisPortion(address account) private view returns (uint256 portion) {
+        if (0 < _genesisFund) {
+            portion = GENESIS_AMOUNT * _genesisDeposit[account] / _genesisFund;
         }
     }
 
-    function getPresale(address account) public view 
+    function getGenesis(address account) public view 
         returns (
             bool depositAllowed,
 
-            uint256 endTimestamp,
+            uint256 depositMax,
+            uint256 depositCap,
+
+            uint32 startTimestamp,
+            uint32 endTimestamp,
             uint256 liquidityCreatedTimestamp,
 
-            uint256 presaleAmount,
+            uint256 genesisAmount,
             uint256 fund,
             uint256 portion,
 
@@ -106,14 +148,18 @@ contract HyperDeFi is HyperDeFiToken {
     {
         depositAllowed = 0 == _liquidityCreatedTimestamp;
 
-        endTimestamp = PRESALE_END_TIMESTAMP;
+        depositMax = GENESIS_DEPOSIT_MAX;
+        depositCap = GENESIS_DEPOSIT_CAP;
+
+        startTimestamp = GENESIS_START_TIMESTAMP;
+        endTimestamp = GENESIS_END_TIMESTAMP;
         liquidityCreatedTimestamp = _liquidityCreatedTimestamp;
 
-        presaleAmount = PRESALE_AMOUNT;
-        fund = _presaleFund;
-        portion = _getPortion(account);
+        genesisAmount = GENESIS_AMOUNT;
+        fund = _genesisFund;
+        portion = _genesisPortion(account);
 
-        redeemed = _presaleRedeemed[account];
+        redeemed = _genesisRedeemed[account];
     }
 
 
@@ -123,8 +169,8 @@ contract HyperDeFi is HyperDeFiToken {
             string[3]  memory tokenSymbols,
             uint8[3]   memory tokenDecimals,
             uint256[3] memory tokenPrices,
-            uint256[10] memory supplies,
-            address[10] memory accounts,
+            uint256[9] memory supplies,
+            address[9] memory accounts,
             
             uint256 holders,
             uint256 usernames
@@ -156,9 +202,8 @@ contract HyperDeFi is HyperDeFiToken {
         supplies[4] = balanceOf(PANCAKE_PAIR);    // liquidity
         supplies[5] = balanceOf(address(BUFFER)); // buffer
         supplies[6] = balanceOf(TAX);             // tax
-        supplies[7] = balanceOf(AIRDROP);         // airdrop
-        supplies[8] = balanceOf(FOMO);            // fomo
-        supplies[9] = balanceOf(BLACK_HOLE);      // dead
+        supplies[7] = balanceOf(FOMO);            // fomo
+        supplies[8] = balanceOf(BLACK_HOLE);      // dead
 
         // accounts
         accounts[0] = address(PANCAKE);  // pancake
@@ -167,10 +212,9 @@ contract HyperDeFi is HyperDeFiToken {
         accounts[3] = PANCAKE_PAIR;      // pair
         accounts[4] = address(BUFFER);   // buffer
         accounts[5] = TAX;               // tax
-        accounts[6] = AIRDROP;           // airdrop
-        accounts[7] = FOMO;              // fomo
-        accounts[8] = owner();           // fund
-        accounts[9] = BLACK_HOLE;        // burn
+        accounts[6] = FOMO;              // fomo
+        accounts[7] = owner();           // fund
+        accounts[8] = BLACK_HOLE;        // burn
 
         //        
         holders = _holders.length;
@@ -183,7 +227,7 @@ contract HyperDeFi is HyperDeFiToken {
             address fomoNext,
 
             uint16[7]   memory i16,
-            uint256[16] memory i256,
+            uint256[18] memory i256,
 
             uint8[8] memory takerFees,
             uint8[8] memory makerFees,
@@ -206,22 +250,21 @@ contract HyperDeFi is HyperDeFiToken {
         i16[6] = FOMO_PERCENTAGE;         // fomoPercentage
 
         i256[0] = LAUNCH_TIMESTAMP;      // launch timestamp
-        i256[1] = AIRDROP_MAX;           // airdrop max
-        i256[2] = INIT_LIQUIDITY;        // init liquidity
-        i256[3] = LOTTO_THRESHOLD;       // lotto  threshold
-        i256[4] = _getWhaleThreshold();  // whale  threshold
-        i256[5] = _getRobberThreshold(); // robber threshold
+        i256[1] = INIT_LIQUIDITY;        // init liquidity
+        i256[2] = AIRDROP_THRESHOLD;     // airdrop threshold
+        i256[3] = _getWhaleThreshold();  // whale   threshold
+        i256[4] = _getRobberThreshold(); // robber  threshold
 
-        i256[6] = _getAutoSwapAmountMin();  // autoSwapAmountMin
-        i256[7] = _getAutoSwapAmountMax();  // autoSwapAmountMax
+        i256[5] = _getAutoSwapAmountMin();  // autoSwapAmountMin
+        i256[6] = _getAutoSwapAmountMax();  // autoSwapAmountMax
 
-        i256[8] = _getFomoAmount();     // fomo amount
-        i256[9] = _fomoTimestamp;       // fomo timestamp
-        i256[10] = FOMO_TIMESTAMP_STEP; // fomo timestampStep
+        i256[7] = _getFomoAmount();     // fomo amount
+        i256[8] = _fomoTimestamp;       // fomo timestamp
+        i256[9] = FOMO_TIMESTAMP_STEP;  // fomo timestampStep
 
 
         takerFees[0] = TAKER_FEE.tax;
-        takerFees[1] = TAKER_FEE.lotto;
+        takerFees[1] = TAKER_FEE.airdrop;
         takerFees[2] = TAKER_FEE.fomo;
         takerFees[3] = TAKER_FEE.liquidity;
         takerFees[4] = TAKER_FEE.fund;
@@ -230,7 +273,7 @@ contract HyperDeFi is HyperDeFiToken {
         takerFees[7] = TAKER_FEE.fee;
 
         makerFees[0] = MAKER_FEE.tax;
-        makerFees[1] = MAKER_FEE.lotto;
+        makerFees[1] = MAKER_FEE.airdrop;
         makerFees[2] = MAKER_FEE.fomo;
         makerFees[3] = MAKER_FEE.liquidity;
         makerFees[4] = MAKER_FEE.fund;
@@ -239,7 +282,7 @@ contract HyperDeFi is HyperDeFiToken {
         makerFees[7] = MAKER_FEE.fee;
         
         whaleFees[0] = WHALE_FEE.tax;
-        whaleFees[1] = WHALE_FEE.lotto;
+        whaleFees[1] = WHALE_FEE.airdrop;
         whaleFees[2] = WHALE_FEE.fomo;
         whaleFees[3] = WHALE_FEE.liquidity;
         whaleFees[4] = WHALE_FEE.fund;
@@ -248,7 +291,7 @@ contract HyperDeFi is HyperDeFiToken {
         whaleFees[7] = WHALE_FEE.fee;
         
         robberFees[0] = ROBBER_FEE.tax;
-        robberFees[1] = ROBBER_FEE.lotto;
+        robberFees[1] = ROBBER_FEE.airdrop;
         robberFees[2] = ROBBER_FEE.fomo;
         robberFees[3] = ROBBER_FEE.liquidity;
         robberFees[4] = ROBBER_FEE.fund;
@@ -259,12 +302,15 @@ contract HyperDeFi is HyperDeFiToken {
         flats = _flats;
         slots = _slots;
 
-        // pre-sale
-        i256[11] = PRESALE_END_TIMESTAMP;
-        i256[12] = _liquidityCreatedTimestamp;
-        i256[13] = PRESALE_AMOUNT;
-        i256[14] = balanceOf(address(this));
-        i256[15] = _presaleFund;
+        // genesis
+        i256[10] = GENESIS_DEPOSIT_MAX;
+        i256[11] = GENESIS_DEPOSIT_CAP;
+        i256[12] = GENESIS_START_TIMESTAMP;
+        i256[13] = GENESIS_END_TIMESTAMP;
+        i256[14] = _liquidityCreatedTimestamp;
+        i256[15] = GENESIS_AMOUNT;
+        i256[16] = balanceOf(address(this));
+        i256[17] = _genesisFund;
     }
 
     function getAccount(address account) public view
@@ -283,9 +329,9 @@ contract HyperDeFi is HyperDeFiToken {
             
             // pre-sale
             uint256 bnbBalance,
-            uint256 presaleDeposit,
-            uint256 presalePortion,
-            bool presaleRedeemed
+            uint256 genesisDeposit,
+            uint256 genesisPortion,
+            bool    genesisRedeemed
         )
     {
         isHolder = _isHolder[account];
@@ -300,11 +346,11 @@ contract HyperDeFi is HyperDeFiToken {
         totalHarvest = _totalHarvest[account];
         totalTaxSnap = _totalTaxSnap[account];
 
-        // pre-sale
+        // genesis
         bnbBalance     = account.balance;
-        presaleDeposit = _presaleDeposit[account];
-        presalePortion = _getPortion(account);
-        presaleRedeemed = _presaleRedeemed[account];
+        genesisDeposit = _genesisDeposit[account];
+        genesisPortion = _genesisPortion(account);
+        genesisRedeemed = _genesisRedeemed[account];
     }
 
     function getAccountByUsername(string calldata value) public view
