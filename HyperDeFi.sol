@@ -6,14 +6,6 @@ import "./HyperDeFiToken.sol";
 
 
 contract HyperDeFi is HyperDeFiToken {
-    uint256                      private _liquidityCreatedTimestamp;
-    uint256                      private _genesisFund;
-    mapping (address => uint256) private _genesisDeposit;
-    mapping (address => bool)    private _genesisRedeemed;
-
-    event GenesisDeposit(address indexed account, uint256 bnbAmount);
-
-
     modifier inGenesis {
         require(block.timestamp > GENESIS_START_TIMESTAMP, "HyperDeFi Genesis: not started");
         require(0 == _liquidityCreatedTimestamp, "HyperDeFi Genesis: PancakeSwap liquidity has already been created");
@@ -45,7 +37,7 @@ contract HyperDeFi is HyperDeFiToken {
         }
     }
 
-    // for Pre-Sale
+    // for Genesis
     constructor () {
         _totalSupply += GENESIS_AMOUNT;
         _balance[address(this)] += GENESIS_AMOUNT;
@@ -226,8 +218,8 @@ contract HyperDeFi is HyperDeFiToken {
             bool    autoSwapReady,
             address fomoNext,
 
-            uint16[7]   memory i16,
-            uint256[18] memory i256,
+            uint16[7]   memory uint16s,
+            uint256[18] memory uint256s,
 
             uint8[8] memory takerFees,
             uint8[8] memory makerFees,
@@ -241,26 +233,26 @@ contract HyperDeFi is HyperDeFiToken {
         autoSwapReady = _autoSwapReady();
         fomoNext      = _fomoNextAccount;
 
-        i16[0] = WHALE_FRACTION_A;
-        i16[1] = WHALE_FRACTION_B;
-        i16[2] = ROBBER_PERCENTAGE;
-        i16[3] = AUTO_SWAP_NUMERATOR_MIN; // autoSwapNumeratorMin
-        i16[4] = AUTO_SWAP_NUMERATOR_MAX; // autoSwapNumeratorMax
-        i16[5] = AUTO_SWAP_DENOMINATOR;   // autoSwapDenominator
-        i16[6] = FOMO_PERCENTAGE;         // fomoPercentage
+        uint16s[0] = WHALE_FRACTION_A;
+        uint16s[1] = WHALE_FRACTION_B;
+        uint16s[2] = ROBBER_PERCENTAGE;
+        uint16s[3] = AUTO_SWAP_NUMERATOR_MIN; // autoSwapNumeratorMin
+        uint16s[4] = AUTO_SWAP_NUMERATOR_MAX; // autoSwapNumeratorMax
+        uint16s[5] = AUTO_SWAP_DENOMINATOR;   // autoSwapDenominator
+        uint16s[6] = FOMO_PERCENTAGE;         // fomoPercentage
 
-        i256[0] = LAUNCH_TIMESTAMP;      // launch timestamp
-        i256[1] = INIT_LIQUIDITY;        // init liquidity
-        i256[2] = AIRDROP_THRESHOLD;     // airdrop threshold
-        i256[3] = _getWhaleThreshold();  // whale   threshold
-        i256[4] = _getRobberThreshold(); // robber  threshold
+        uint256s[0] = LAUNCH_TIMESTAMP;      // launch timestamp
+        uint256s[1] = INIT_LIQUIDITY;        // init liquidity
+        uint256s[2] = AIRDROP_THRESHOLD;     // airdrop threshold
+        uint256s[3] = _getWhaleThreshold();  // whale   threshold
+        uint256s[4] = _getRobberThreshold(); // robber  threshold
 
-        i256[5] = _getAutoSwapAmountMin();  // autoSwapAmountMin
-        i256[6] = _getAutoSwapAmountMax();  // autoSwapAmountMax
+        uint256s[5] = _getAutoSwapAmountMin();  // autoSwapAmountMin
+        uint256s[6] = _getAutoSwapAmountMax();  // autoSwapAmountMax
 
-        i256[7] = _getFomoAmount();     // fomo amount
-        i256[8] = _fomoTimestamp;       // fomo timestamp
-        i256[9] = FOMO_TIMESTAMP_STEP;  // fomo timestampStep
+        uint256s[7] = _getFomoAmount();     // fomo amount
+        uint256s[8] = _fomoTimestamp;       // fomo timestamp
+        uint256s[9] = FOMO_TIMESTAMP_STEP;  // fomo timestampStep
 
 
         takerFees[0] = TAKER_FEE.tax;
@@ -303,86 +295,90 @@ contract HyperDeFi is HyperDeFiToken {
         slots = _slots;
 
         // genesis
-        i256[10] = GENESIS_DEPOSIT_MAX;
-        i256[11] = GENESIS_DEPOSIT_CAP;
-        i256[12] = GENESIS_START_TIMESTAMP;
-        i256[13] = GENESIS_END_TIMESTAMP;
-        i256[14] = _liquidityCreatedTimestamp;
-        i256[15] = GENESIS_AMOUNT;
-        i256[16] = balanceOf(address(this));
-        i256[17] = _genesisFund;
+        uint256s[10] = GENESIS_DEPOSIT_MAX;
+        uint256s[11] = GENESIS_DEPOSIT_CAP;
+        uint256s[12] = GENESIS_START_TIMESTAMP;
+        uint256s[13] = GENESIS_END_TIMESTAMP;
+        uint256s[14] = _liquidityCreatedTimestamp;
+        uint256s[15] = GENESIS_AMOUNT;
+        uint256s[16] = balanceOf(address(this));
+        uint256s[17] = _genesisFund;
     }
 
     function getAccount(address account) public view
         returns (
-            bool    isHolder,
-            bool    isWhale,
-            bool    isFlat,
-            bool    isSlot,
-
             string memory username,
-            uint256 balance,
-            uint256 harvest,
-
-            uint256 totalHarvest,
-            uint256 totalTaxSnap,
-            
-            // pre-sale
-            uint256 bnbBalance,
-            uint256 genesisDeposit,
-            uint256 genesisPortion,
-            bool    genesisRedeemed
+            bool[5] memory bools,
+            uint256[10] memory uint256s
         )
     {
-        isHolder = _isHolder[account];
-        isWhale  = balanceOf(account) > _getWhaleThreshold();
-        isFlat   = _isFlat[account];
-        isSlot   = _isSlot[account];
+        username = _username[account];
 
-        username     = _username[account];
-        balance      = balanceOf(account);
-        harvest      = harvestOf(account);
+        bools[0] = _isHolder[account];                        // isHolder
+        bools[1] = balanceOf(account) > _getWhaleThreshold(); // isWhale
+        bools[2] = _isFlat[account];                          // isFlat
+        bools[3] = _isSlot[account];                          // isSlot
 
-        totalHarvest = _totalHarvest[account];
-        totalTaxSnap = _totalTaxSnap[account];
+        uint256s[0] = balanceOf(account);     // balance
+        uint256s[1] = harvestOf(account);     // harvest
+        uint256s[2] = _totalHarvest[account]; // totalHarvest
+        uint256s[3] = _totalTaxSnap[account]; // totalTaxSnap
+
+        uint256s[4] = _couponUsed[account]; // coupon used
+        uint256s[5] = _coupon[account];     // coupon
+        uint256s[6] = _visitors[account];   // visitors
 
         // genesis
-        bnbBalance     = account.balance;
-        genesisDeposit = _genesisDeposit[account];
-        genesisPortion = _genesisPortion(account);
-        genesisRedeemed = _genesisRedeemed[account];
+        uint256s[7] = account.balance;          // bnbBalance
+        uint256s[8] = _genesisDeposit[account]; // genesisDeposit
+        uint256s[9] = _genesisPortion(account); // genesisPortion
+
+        bools[4] = _genesisRedeemed[account];   // genesisRedeemed
+    }
+
+    function getCoupon(uint256 coupon) public view
+        returns (
+            bool isInvite,
+            uint256 visitors
+        )
+    {
+        address inviter = _inviter[coupon];
+        
+        isInvite = inviter != address(0);
+        if (isInvite) {
+            visitors = _visitors[inviter];
+        }
     }
 
     function getAccountByUsername(string calldata value) public view
         returns (
             address account,
-        
-            bool    isHolder,
-            bool    isWhale,
-            bool    isFlat,
-            bool    isSlot,
-
-            string memory username,
-            uint256 balance,
-            uint256 harvest,
-
-            uint256 totalHarvest,
-            uint256 totalTaxSnap
+            bool[5] memory bools,
+            uint256[10] memory uint256s
         )
     {
         account = _username2address[value];
 
-        isHolder = _isHolder[account];
-        isWhale  = balanceOf(account) > _getWhaleThreshold();
-        isFlat   = _isFlat[account];
-        isSlot   = _isSlot[account];
+        bools[0] = _isHolder[account];                        // isHolder
+        bools[1] = balanceOf(account) > _getWhaleThreshold(); // isWhale
+        bools[2] = _isFlat[account];                          // isFlat
+        bools[3] = _isSlot[account];                          // isSlot
 
-        username     = _username[account];
-        balance      = balanceOf(account);
-        harvest      = harvestOf(account);
+        uint256s[0] = balanceOf(account);     // balance
+        uint256s[1] = harvestOf(account);     // harvest
+        uint256s[2] = _totalHarvest[account]; // totalHarvest
+        uint256s[3] = _totalTaxSnap[account]; // totalTaxSnap
 
-        totalHarvest = _totalHarvest[account];
-        totalTaxSnap = _totalTaxSnap[account];
+        uint256s[4] = _couponUsed[account]; // coupon used
+        uint256s[5] = _coupon[account];     // coupon
+        uint256s[6] = _visitors[account];   // visitors
+
+        // genesis
+        uint256s[7] = account.balance;          // bnbBalance
+        uint256s[8] = _genesisDeposit[account]; // genesisDeposit
+        uint256s[9] = _genesisPortion(account); // genesisPortion
+
+        bools[4] = _genesisRedeemed[account];   // genesisRedeemed
     }
 
     function getHolders(uint256 offset) public view

@@ -9,7 +9,7 @@ import "./IHyperDeFiBuffer.sol";
 
 
 contract HyperDeFiBuffer is Context, IHyperDeFiBuffer {
-    IERC20             private constant HYPER_DEFI = IERC20(0x2411dc6C13062Ae1A9a6149ED54b99Fd86dbE45c);
+    IERC20             private constant HYPER_DEFI = IERC20(0xc18C2f15B675DE00041BE48540f77C6A6cEf32b6);
     IERC20             private constant WBNB       = IERC20(0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd);
     IUniswapV2Router02 private constant PANCAKE    = IUniswapV2Router02(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3);
     address            private constant BLACK_HOLE = address(0xdead);
