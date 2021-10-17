@@ -5,9 +5,20 @@ pragma solidity ^0.8.0;
 import "./IERC20Metadata.sol";
 
 contract HyperDeFiTokenMetadata is IERC20Metadata {
-    string internal constant _name   = "v476";
-    string internal constant _symbol = "v476";
+    string internal constant _name   = "v503";
+    string internal constant _symbol = "v503";
     uint8  internal constant _decimals = 2;
+
+    uint256 internal constant  TOTAL_SUPPLY_CAP      = 1_000_000_000_000_000e2;
+    uint256 internal immutable INIT_LIQUIDITY        = TOTAL_SUPPLY_CAP / 10;
+
+    uint256 internal constant  GENESIS_AMOUNT        = TOTAL_SUPPLY_CAP * 8 / 100;
+    uint256 internal constant  GENESIS_DEPOSIT_CAP   = 0.3e18;
+    uint256 internal constant  GENESIS_DEPOSIT_MAX   = 0.003e18;
+
+    uint32 internal immutable GENESIS_START_TIMESTAMP = 1634299200;
+    uint32 internal immutable GENESIS_END_TIMESTAMP   = 1634301000;
+    uint32 internal immutable LAUNCH_TIMESTAMP        = 1634310000;
 
     /**
      * @dev Returns the name of the token.
