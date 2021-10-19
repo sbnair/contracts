@@ -221,10 +221,10 @@ contract HyperDeFi is HyperDeFiToken {
             uint16[7]   memory uint16s,
             uint256[18] memory uint256s,
 
-            uint8[8] memory takerFees,
-            uint8[8] memory makerFees,
-            uint8[8] memory whaleFees,
-            uint8[8] memory robberFees,
+            uint8[6] memory takerFees,
+            uint8[6] memory makerFees,
+            uint8[6] memory whaleFees,
+            uint8[6] memory robberFees,
             
             address[] memory flats,
             address[] memory slots
@@ -255,41 +255,33 @@ contract HyperDeFi is HyperDeFiToken {
         uint256s[9] = FOMO_TIMESTAMP_STEP;  // fomo timestampStep
 
 
-        takerFees[0] = TAKER_FEE.tax;
+        takerFees[0] = TAKER_FEE.farm;
         takerFees[1] = TAKER_FEE.airdrop;
         takerFees[2] = TAKER_FEE.fomo;
         takerFees[3] = TAKER_FEE.liquidity;
         takerFees[4] = TAKER_FEE.fund;
         takerFees[5] = TAKER_FEE.destroy;
-        takerFees[6] = TAKER_FEE.txn;
-        takerFees[7] = TAKER_FEE.fee;
 
-        makerFees[0] = MAKER_FEE.tax;
+        makerFees[0] = MAKER_FEE.farm;
         makerFees[1] = MAKER_FEE.airdrop;
         makerFees[2] = MAKER_FEE.fomo;
         makerFees[3] = MAKER_FEE.liquidity;
         makerFees[4] = MAKER_FEE.fund;
         makerFees[5] = MAKER_FEE.destroy;
-        makerFees[6] = MAKER_FEE.txn;
-        makerFees[7] = MAKER_FEE.fee;
-        
-        whaleFees[0] = WHALE_FEE.tax;
+
+        whaleFees[0] = WHALE_FEE.farm;
         whaleFees[1] = WHALE_FEE.airdrop;
         whaleFees[2] = WHALE_FEE.fomo;
         whaleFees[3] = WHALE_FEE.liquidity;
         whaleFees[4] = WHALE_FEE.fund;
         whaleFees[5] = WHALE_FEE.destroy;
-        whaleFees[6] = WHALE_FEE.txn;
-        whaleFees[7] = WHALE_FEE.fee;
         
-        robberFees[0] = ROBBER_FEE.tax;
+        robberFees[0] = ROBBER_FEE.farm;
         robberFees[1] = ROBBER_FEE.airdrop;
         robberFees[2] = ROBBER_FEE.fomo;
         robberFees[3] = ROBBER_FEE.liquidity;
         robberFees[4] = ROBBER_FEE.fund;
         robberFees[5] = ROBBER_FEE.destroy;
-        robberFees[6] = ROBBER_FEE.txn;
-        robberFees[7] = ROBBER_FEE.fee;
 
         flats = _flats;
         slots = _slots;
@@ -338,14 +330,14 @@ contract HyperDeFi is HyperDeFiToken {
 
     function getCoupon(uint256 coupon) public view
         returns (
-            bool isInvite,
+            bool valid,
             uint256 visitors
         )
     {
         address inviter = _inviter[coupon];
         
-        isInvite = inviter != address(0);
-        if (isInvite) {
+        valid = inviter != address(0);
+        if (valid) {
             visitors = _visitors[inviter];
         }
     }

@@ -9,11 +9,11 @@ import "./IHyperDeFiBuffer.sol";
 
 
 contract HyperDeFiBuffer is Context, IHyperDeFiBuffer {
-    IERC20             private constant HYPER_DEFI = IERC20(0xc18C2f15B675DE00041BE48540f77C6A6cEf32b6);
+    IERC20             private constant HYPER_DEFI = IERC20(0x65A91A96D83F101BA5Ca9dD13f9c2cC85deae6fd);
     IERC20             private constant WBNB       = IERC20(0xae13d989daC2f0dEbFf460aC112a837C89BAa7cd);
     IUniswapV2Router02 private constant PANCAKE    = IUniswapV2Router02(0x9Ac64Cc6e4415144C455BD8E4837Fea55603e5c3);
     address            private constant BLACK_HOLE = address(0xdead);
-
+    
     function swapIntoLiquidity(uint256 amount) external override returns (uint256 tokenAdded, uint256 wbnbAdded) {
         require(_msgSender() == address(HYPER_DEFI), "Buffer: caller is not the `HyperDeFi` contract");
 
