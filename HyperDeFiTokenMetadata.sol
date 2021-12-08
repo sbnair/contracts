@@ -5,19 +5,42 @@ pragma solidity ^0.8.0;
 import "./IERC20Metadata.sol";
 
 contract HyperDeFiTokenMetadata is IERC20Metadata {
-    string internal constant _name   = "v519";
-    string internal constant _symbol = "v519";
+    string internal constant _name   = "HyperDeFi";
+    string internal constant _symbol = "HDEFI";
     uint8  internal constant _decimals = 2;
 
-    uint256 internal constant  TOTAL_SUPPLY_CAP    = 1_000_000_000_000_000e2;
-    uint256 internal immutable INIT_LIQUIDITY      = TOTAL_SUPPLY_CAP * 20 / 100;
-    uint256 internal constant  GENESIS_AMOUNT      = TOTAL_SUPPLY_CAP * 15 / 100;
-    uint256 internal constant  GENESIS_DEPOSIT_CAP = 0.03e18;
-    uint256 internal constant  GENESIS_DEPOSIT_MAX = 0.003e18;
+    uint8   internal constant FOMO_PERCENTAGE     = 60;
+    uint256 internal constant FOMO_TIMESTAMP_STEP = 15 minutes;
 
-    uint32 internal immutable GENESIS_START_TIMESTAMP = 1634601600;
-    uint32 internal immutable GENESIS_END_TIMESTAMP   = 1634688000;
-    uint32 internal immutable LAUNCH_TIMESTAMP        = 1634695200;
+    uint256 internal constant TOTAL_SUPPLY_CAP   = 1_000_000_000_000e2;
+    uint256 internal constant BURN_AMOUNT        = TOTAL_SUPPLY_CAP / 2;
+    uint256 internal constant DIST_AMOUNT        = TOTAL_SUPPLY_CAP * 48 / 100;
+    uint256 internal constant INIT_LIQUIDITY     = TOTAL_SUPPLY_CAP / 100;
+    uint256 internal constant IDO_AMOUNT         = TOTAL_SUPPLY_CAP / 100;
+    uint256 internal constant IDO_DEPOSIT_CAP    = 50e18;
+    uint256 internal constant IDO_DEPOSIT_MAX    = 0.1e18;
+    uint32  internal constant IDO_TIMESTAMP_FROM = 1639137600;
+    uint32  internal constant IDO_TIMESTAMP_TO   = IDO_TIMESTAMP_FROM + 7 days;
+    uint32  internal constant TIMESTAMP_LAUNCH   = IDO_TIMESTAMP_TO + 1 days;
+
+    address internal constant ADDRESS_BUFFER = address(0xbbbbbbb1908049D19544205F61D6D42aBDE9952F);
+    address internal constant ADDRESS_IDO    = address(0x00000000E00A2E5B43460D40BcdF82E6e054CD3D);
+    address internal constant ADDRESS_DEX    = address(0x10ED43C718714eb63d5aA57B78B54704E256024E);
+    address internal constant ADDRESS_USD    = address(0xe9e7CEA3DedcA5984780Bafc599bD69ADd087D56);
+
+    uint16  internal constant AUTO_SWAP_NUMERATOR_MIN = 1;
+    uint16  internal constant AUTO_SWAP_NUMERATOR_MAX = 10;
+    uint16  internal constant AUTO_SWAP_DENOMINATOR   = 1_000;
+    uint256 internal constant AIRDROP_THRESHOLD       = 1_000_000e2;
+
+    uint16  internal WHALE_NUMERATOR   = 5;
+    uint16  internal WHALE_DENOMINATOR = 1_000;
+    uint8   internal ROBBER_PERCENTAGE = 15;
+    uint8[] internal BONUS             = [10, 20, 20];
+
+    address internal constant FARM       = address(0x1);
+    address internal constant FOMO       = address(0xf);
+    address internal constant BLACK_HOLE = address(0xdead);
 
     /**
      * @dev Returns the name of the token.
