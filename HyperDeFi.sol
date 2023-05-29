@@ -218,22 +218,30 @@ contract HyperDeFi is HyperDeFiToken {
 
     function getHolders(uint256 offset) public view
         returns (
-            uint256[250] memory ids,
-            address[250] memory holders,
-            string[250]  memory usernames,
-            uint256[250] memory balances,
-            bool[250]    memory isWhales
+            uint256[] memory ids,
+            address[] memory holders,
+            string[]  memory usernames,
+            uint256[] memory balances,
+            bool[]    memory isWhales
         )
     {
         uint8 counter;
-        for (uint256 i = offset; i < _holders.length; i++) {
-            counter++;
-            if (counter > 250) break;
-            ids[i] = i;
-            holders[i] = _holders[i];
-            usernames[i] = _username[_holders[i]];
-            balances[i] = balanceOf(holders[i]);
-            isWhales[i] = balanceOf(holders[i]) > _getWhaleThreshold();
-        }
+        uint256 length = _holders.length;
+        uint256 maxSize = length - offset > 250 ? 250 : length - offset; 
+
+            ids = new uint256[](maxSize);
+            holders = new address[](maxSize);
+            usernames = new string[](maxSize);
+            balances = new uint256[](maxSize);
+            isWhales = new bool[](maxSize);
+
+            for (uint256 i = offset; i < length && counter < maxSize; i++) {
+                        ids[counter] = i;
+        holders[counter] = _holders[i];
+        usernames[counter] = _username[_holders[i]];
+        balances[counter] = balanceOf(holders[counter]);
+        isWhales[counter] = balances[counter] > _getWhaleThreshold();
+        counter++;
     }
+}
 }

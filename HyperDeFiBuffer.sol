@@ -51,11 +51,11 @@ contract HyperDeFiBuffer is Context, IHyperDeFiBuffer {
 
     function priceToken2WRAP() public view returns (uint256 price) {
         address[] memory path = new address[](2);
-        
         path[0] = address(_TOKEN);
         path[1] = address(_WRAP);
         
-        price = _DEX.getAmountsOut(10 ** _decimals, path)[1];
+            uint256[] memory amounts = _DEX.getAmountsOut(10 ** _decimals, path);
+            price = amounts[amounts.length - 1]; // Get the last amount in the array
     }
 
     function priceToken2USD() public view returns (uint256 price) {
@@ -65,7 +65,8 @@ contract HyperDeFiBuffer is Context, IHyperDeFiBuffer {
         path[1] = address(_WRAP);
         path[2] = address(_USD);
 
-        price = _DEX.getAmountsOut(10 ** _decimals, path)[2];
+            uint256[] memory amounts = _DEX.getAmountsOut(10 ** _decimals, path);
+            price = amounts[amounts.length - 1]; // Get the last amount in the array
     }
 
     function priceWRAP2USD() public view returns (uint256 price) {
